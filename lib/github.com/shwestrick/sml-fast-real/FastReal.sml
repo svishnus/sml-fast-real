@@ -17,6 +17,8 @@ sig
 
   val from_string: string -> R.real option
   val from_string_with_info: string -> result_with_info option
+
+  val test_fast_float: char ArraySlice.slice -> real option
 end =
 struct
 
@@ -365,5 +367,6 @@ struct
   fun from_string_simd s =
     from_slice_with_info (ArraySlice.full s)
 
+  val test_fast_float = DigitParse.parseSlice
 
 end

@@ -1,32 +1,67 @@
 structure DigitParse =
 (* TODO: Probably rename to SIMDParse *)
 struct
-  val parse = _import "neon_parse_digits" public:
-        (string * int * Word64.word ref) -> int;
-  
-  val simdAvailable = true; (* TODO: Do an env check to see if we can use SIMD *)
+  val fast_float_parse_chars = _import "fast_float_parse_chars" public:
+        (char Array.array * int * int) -> real;
 
-  fun parseString s =
+  fun parseFloat s =
     let
-      val accRef = ref 0w0 : Word64.word ref
-      val count = parse (s, String.size s, accRef)
+      val chars = Array.fromList (String.explode s)
+      val result = fast_float_parse_chars (chars, 0, String.size s)
     in
-      (!accRef, count)
+      if Real.isFinite result andalso not (Real.== (result, Real.maxFinite)) then
+        SOME result
+      else
+        NONE
+    end
+
+  fun parseChars (chars, start, len) =
+    let
+      val result = fast_float_parse_chars (chars, start, len)
+    in
+      if Real.isFinite result andalso not (Real.== (result, Real.maxFinite)) then
+        SOME result
+      else
+        NONE
+    end
+
+  fun parseSlice slice =
+    let
+      val (arr, start, len) = ArraySlice.base slice
+      val result = fast_float_parse_chars (arr, start, len)
+    in
+      if Real.isFinite result andalso not (Real.== (result, Real.maxFinite)) then
+        SOME result
+      else
+        NONE
     end
 end
 
-val tests = [
-  "123456",
-  "12345678901234567890"
+val floatTests = [
+  "123.456",
+  "-123.456",
+  "1.23e4",
+  "-1.23e-4",
+  "0.0",
+  "inf",
+  "nan"
 ]
 
-fun test () = 
+fun testFloats () =
     let
-        val _ = print "Testing digit parse\n"
-        val _ = List.app (fn s => print ("Testing: " ^ s ^ "\n")) tests
-        val _ = List.app (fn s => print ("  Parsed: " ^ Word64.fmt StringCvt.DEC (#1 (DigitParse.parseString s)) ^ "\n")) tests
+        val _ = print "\nTesting float parse\n"
+        val _ = List.app (fn s => 
+            let
+                val _ = print ("Testing: " ^ s ^ "\n")
+                val result = DigitParse.parseFloat s
+                val _ = print ("  Parsed: " ^ (case result of 
+                    SOME r => Real.toString r 
+                  | NONE => "failed") ^ "\n")
+            in
+                ()
+            end) floatTests
     in
         print "Done\n"
     end
 
-(* val _ = test () *)
+val _ = testFloats ()

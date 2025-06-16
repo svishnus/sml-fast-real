@@ -1,6 +1,14 @@
-all:
-	mlton -default-ann 'allowFFI true' -export-header export.h  digit_parse.sml digit_parse_neon.c
-obj:
-	clang -O3 -c -target arm64-apple-macos digit_parse_neon.c -o digit_parse_neon.o
+FAST_FLOAT_DIR ?= fast_float
+
+all: fast_float_wrapper.o
+	mlton -default-ann 'allowFFI true' -export-header export.h \
+		-link-opt "-L. -lstdc++" \
+		DigitParse.sml fast_float_wrapper.o
+
+fast_float_wrapper.o: fast_float_wrapper.c
+	clang++ -std=c++17 -O3 -I$(FAST_FLOAT_DIR)/include -c fast_float_wrapper.c -o fast_float_wrapper.o
+
 clean:
-	rm digit_parse
+	rm -f DigitParse fast_float_wrapper.o export.h
+
+.PHONY: all clean
