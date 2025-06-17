@@ -30,10 +30,10 @@ struct
       val (arr, start, len) = ArraySlice.base slice
       val result = fast_float_parse_chars (arr, start, len)
     in
-      if Real.isFinite result andalso not (Real.== (result, Real.maxFinite)) then
-        SOME result
-      else
+      if Real.== (result, Real.maxFinite) then
         NONE
+      else
+        SOME result
     end
 end
 
@@ -44,7 +44,14 @@ val floatTests = [
   "-1.23e-4",
   "0.0",
   "inf",
-  "nan"
+  "+inf",
+  "-inf",
+  "infinity",
+  "+infinity",
+  "-infinity",
+  "nan",
+  "0.09073e-5",
+  "0.09073e+5"
 ]
 
 fun testFloats () =
@@ -53,9 +60,13 @@ fun testFloats () =
         val _ = List.app (fn s => 
             let
                 val _ = print ("Testing: " ^ s ^ "\n")
-                val result = DigitParse.parseFloat s
+                val (r, _) = valOf (Real.scan (fn i => if i >= String.size s then NONE else SOME (String.sub (s, i), i + 1)) 0)
+                val _ = print ("Real.scan parsed: " ^ Real.toString r ^ "\n")
+                val chars = Array.fromList (String.explode s)
+                val slice = ArraySlice.full chars
+                val result = DigitParse.parseSlice slice
                 val _ = print ("  Parsed: " ^ (case result of 
-                    SOME r => Real.toString r 
+                    SOME res => Real.toString res 
                   | NONE => "failed") ^ "\n")
             in
                 ()
